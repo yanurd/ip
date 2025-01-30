@@ -1,20 +1,23 @@
-# Step 1: Build the JAR inside the container
-FROM eclipse-temurin:17-jdk AS build
+# Step 1: Use a Maven image to build the JAR
+FROM maven:3.9.6-eclipse-temurin-17 AS build
 
-# Set the working directory inside the container
+# Set the working directory
 WORKDIR /app
 
-# Copy Maven project files (pom.xml and source code)
+# Copy Maven project files first (to leverage Docker cache)
 COPY pom.xml .
+RUN mvn dependency:go-offline  # Pre-download dependencies
+
+# Copy the rest of the application source code
 COPY src ./src
 
 # Build the application
 RUN mvn clean package -DskipTests
 
-# Step 2: Create a smaller runtime image
+# Step 2: Use a lightweight JRE image for runtime
 FROM eclipse-temurin:17-jre
 
-# Set working directory for the runtime container
+# Set working directory
 WORKDIR /app
 
 # Copy only the built JAR from the previous step
