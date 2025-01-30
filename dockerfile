@@ -1,14 +1,27 @@
-# Use a base image with JDK 17 (since your project is Java 17)
+# Step 1: Build the JAR inside the container
 FROM eclipse-temurin:17-jdk AS build
 
 # Set the working directory inside the container
 WORKDIR /app
 
-# Copy the built JAR file into the container
-COPY target/*.jar app.jar
+# Copy Maven project files (pom.xml and source code)
+COPY pom.xml .
+COPY src ./src
 
-# Expose the application's port (change if needed)
+# Build the application
+RUN mvn clean package -DskipTests
+
+# Step 2: Create a smaller runtime image
+FROM eclipse-temurin:17-jre
+
+# Set working directory for the runtime container
+WORKDIR /app
+
+# Copy only the built JAR from the previous step
+COPY --from=build /app/target/*.jar app.jar
+
+# Expose the application port
 EXPOSE 8080
 
-# Run the Spring Boot application
+# Run the application
 ENTRYPOINT ["java", "-jar", "app.jar"]
